@@ -10,6 +10,7 @@ let startX, startY, endX, endY;
 let isDrawing = false;
 let shiftPressed = false;
 let drawingEnabled = true;
+let tempLine = null;
 
 chrome.storage.local.get(['drawingEnabled'], (result) => {
   drawingEnabled = result.drawingEnabled !== undefined ? result.drawingEnabled : true;
@@ -24,22 +25,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 document.addEventListener('mousemove', (e) => {
   horizontalLine.style.top = `${e.clientY}px`;
+  if (isDrawing && tempLine) {
+    updateTempLine(e.clientX, e.clientY);
+  }
 });
 
 document.addEventListener('mousedown', (e) => {
   if (!drawingEnabled) return;
-  startX = e.clientX;
-  startY = e.clientY;
+  startX = e.clientX + window.scrollX;
+  startY = e.clientY + window.scrollY;
   isDrawing = true;
+  createTempLine(startX, startY);
 });
 
 document.addEventListener('mouseup', (e) => {
   if (!drawingEnabled) return;
   if (isDrawing) {
-    endX = e.clientX;
-    endY = e.clientY;
+    endX = e.clientX + window.scrollX;
+    endY = e.clientY + window.scrollY;
     drawLine(startX, startY, endX, endY);
     isDrawing = false;
+    removeTempLine();
   }
 });
 
@@ -54,6 +60,31 @@ document.addEventListener('keyup', (e) => {
     shiftPressed = false;
   }
 });
+
+function createTempLine(x, y) {
+  tempLine = document.createElement('div');
+  tempLine.className = 'temp-line';
+  document.body.appendChild(tempLine);
+  tempLine.style.left = `${x}px`;
+  tempLine.style.top = `${y}px`;
+}
+
+function updateTempLine(x, y) {
+  if (!tempLine) return;
+
+  let length = Math.sqrt(Math.pow(x + window.scrollX - startX, 2) + Math.pow(y + window.scrollY - startY, 2));
+  tempLine.style.width = `${length}px`;
+
+  let angle = Math.atan2(y + window.scrollY - startY, x + window.scrollX - startX) * (180 / Math.PI);
+  tempLine.style.transform = `rotate(${angle}deg)`;
+}
+
+function removeTempLine() {
+  if (tempLine) {
+    document.body.removeChild(tempLine);
+    tempLine = null;
+  }
+}
 
 function drawLine(x1, y1, x2, y2) {
   let line = document.createElement('div');
