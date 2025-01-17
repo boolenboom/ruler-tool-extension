@@ -136,6 +136,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 function displayGrid(gridSystem, gridWidth, gridGap) {
+  const screenWidth = window.screen.width;
+  if (gridWidth > screenWidth) {
+    gridWidth = (gridWidth / 1920) * screenWidth;
+  }
+
+  if (gridGap > gridWidth / gridSystem) {
+    gridGap = (gridWidth / gridSystem) * 0.2;
+  }
+
   let viewWidth = 1920;
   let oneGrid = gridWidth / gridSystem;
   let oneGapPercent = gridGap / oneGrid;
