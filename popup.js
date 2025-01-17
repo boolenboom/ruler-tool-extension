@@ -5,10 +5,6 @@ document.getElementById('grid-form').addEventListener('submit', function(event) 
   const gridWidth = document.getElementById('grid-width').value;
   const gridGap = document.getElementById('grid-gap').value;
 
-  chrome.storage.local.set({ gridSystem, gridWidth, gridGap }, () => {
-    console.log('Grid system, width, and gap updated');
-  });
-
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     chrome.tabs.sendMessage(tabs[0].id, {
       type: 'updateGrid',
