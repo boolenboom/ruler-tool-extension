@@ -144,11 +144,15 @@ function displayGrid(gridSystem, gridWidth, gridGap) {
     gridWidth = (gridWidth / 1920) * screenWidth;
   }
 
-  
   if (gridGap > gridWidth / gridSystem) {
     gridGap = (gridWidth / gridSystem) * 0.2;
   }
-  
+
+  let existingGrid = document.getElementById('grid');
+  if (existingGrid) {
+    document.body.removeChild(existingGrid);
+  }
+
   let oneGrid = gridWidth / gridSystem;
   let oneGapPercent = gridGap / oneGrid;
   console.log(gridWidth, gridGap, oneGrid, oneGapPercent);
