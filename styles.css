@@ -23,6 +23,7 @@
   height: 1px;
   background: blue;
   transform-origin: 0 0;
+  z-index: 10000;
 }
 
 .length-label {

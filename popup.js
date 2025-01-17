@@ -5,13 +5,21 @@ document.getElementById('grid-form').addEventListener('submit', function(event) 
   const gridWidth = document.getElementById('grid-width').value;
   const gridGap = document.getElementById('grid-gap').value;
 
-  chrome.runtime.sendMessage({ type: 'updateGrid', gridSystem, gridWidth, gridGap }, function(response) {
-    if (response.status === 'success') {
-      console.log('Grid system, width, and gap updated');
-    } else {
-      console.error('Failed to update grid system, width, and gap');
-    }
+  chrome.storage.local.set({ gridSystem, gridWidth, gridGap }, () => {
+    console.log('Grid system, width, and gap updated');
   });
+
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.sendMessage(tabs[0].id, {
+      type: 'updateGrid',
+      gridSystem,
+      gridWidth,
+      gridGap
+    }, (response) => {
+      console.log(response.status);
+    });
+  });
+
 });
 
 document.getElementById('drawing-checkbox').addEventListener('change', function(event) {
