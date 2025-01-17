@@ -81,3 +81,37 @@ function drawLine(x1, y1, x2, y2) {
   lengthLabel.innerText = `${Math.round(length)}px`;
   line.appendChild(lengthLabel);
 }
+
+// Set the default grid system to 12 grid and display it initially
+let gridSystem = 12;
+let gridWidth = 8;
+
+chrome.storage.local.get(['gridSystem', 'gridWidth'], (result) => {
+  gridSystem = result.gridSystem !== undefined ? result.gridSystem : 12;
+  gridWidth = result.gridWidth !== undefined ? result.gridWidth : 8;
+  displayGrid(gridSystem, gridWidth);
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'updateGrid') {
+    gridSystem = message.gridSystem;
+    gridWidth = message.gridWidth;
+    displayGrid(gridSystem, gridWidth);
+    sendResponse({ status: 'success' });
+  }
+});
+
+function displayGrid(gridSystem, gridWidth) {
+  let grid = document.createElement('div');
+  grid.id = 'grid';
+  grid.style.position = 'fixed';
+  grid.style.top = '0';
+  grid.style.left = '0';
+  grid.style.width = '100%';
+  grid.style.height = '100%';
+  grid.style.pointerEvents = 'none';
+  grid.style.zIndex = '9998';
+  grid.style.backgroundSize = `${gridWidth}px ${gridWidth}px`;
+  grid.style.backgroundImage = `linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px)`;
+  document.body.appendChild(grid);
+}
