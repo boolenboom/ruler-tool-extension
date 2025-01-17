@@ -3,12 +3,13 @@ document.getElementById('grid-form').addEventListener('submit', function(event) 
 
   const gridSystem = document.getElementById('grid-system').value;
   const gridWidth = document.getElementById('grid-width').value;
+  const gridGap = document.getElementById('grid-gap').value;
 
-  chrome.runtime.sendMessage({ type: 'updateGrid', gridSystem, gridWidth }, function(response) {
+  chrome.runtime.sendMessage({ type: 'updateGrid', gridSystem, gridWidth, gridGap }, function(response) {
     if (response.status === 'success') {
-      console.log('Grid system and width updated');
+      console.log('Grid system, width, and gap updated');
     } else {
-      console.error('Failed to update grid system and width');
+      console.error('Failed to update grid system, width, and gap');
     }
   });
 });
