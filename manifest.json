@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Web Page Ruler Tool",
-  "version": "1.0",
+  "version": "1.1",
   "description": "A tool to display a ruler on web pages, choose different grid systems and widths, and draw lines with length display.",
   "permissions": [
     "activeTab",

@@ -3,14 +3,19 @@ document.getElementById('grid-form').addEventListener('submit', function(event) 
 
   const gridSystem = document.getElementById('grid-system').value;
   const gridWidth = document.getElementById('grid-width').value;
+  const gridGap = document.getElementById('grid-gap').value;
 
-  chrome.runtime.sendMessage({ type: 'updateGrid', gridSystem, gridWidth }, function(response) {
-    if (response.status === 'success') {
-      console.log('Grid system and width updated');
-    } else {
-      console.error('Failed to update grid system and width');
-    }
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.sendMessage(tabs[0].id, {
+      type: 'updateGrid',
+      gridSystem,
+      gridWidth,
+      gridGap
+    }, (response) => {
+      console.log(response.status);
+    });
   });
+
 });
 
 document.getElementById('drawing-checkbox').addEventListener('change', function(event) {
@@ -24,3 +29,5 @@ document.getElementById('drawing-checkbox').addEventListener('change', function(
     }
   });
 });
+
+document.getElementById('grid-width').value = 1680;

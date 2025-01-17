@@ -10,6 +10,7 @@ let startX, startY, endX, endY;
 let isDrawing = false;
 let shiftPressed = false;
 let drawingEnabled = true;
+let tempLine = null;
 
 chrome.storage.local.get(['drawingEnabled'], (result) => {
   drawingEnabled = result.drawingEnabled !== undefined ? result.drawingEnabled : true;
@@ -24,22 +25,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 document.addEventListener('mousemove', (e) => {
   horizontalLine.style.top = `${e.clientY}px`;
+  if (isDrawing && tempLine) {
+    updateTempLine(e.clientX, e.clientY);
+  }
 });
 
 document.addEventListener('mousedown', (e) => {
   if (!drawingEnabled) return;
-  startX = e.clientX;
-  startY = e.clientY;
+  startX = e.clientX + window.scrollX;
+  startY = e.clientY + window.scrollY;
   isDrawing = true;
+  createTempLine(startX, startY);
 });
 
 document.addEventListener('mouseup', (e) => {
   if (!drawingEnabled) return;
   if (isDrawing) {
-    endX = e.clientX;
-    endY = e.clientY;
+    endX = e.clientX + window.scrollX;
+    endY = e.clientY + window.scrollY;
     drawLine(startX, startY, endX, endY);
     isDrawing = false;
+    removeTempLine();
   }
 });
 
@@ -54,6 +60,31 @@ document.addEventListener('keyup', (e) => {
     shiftPressed = false;
   }
 });
+
+function createTempLine(x, y) {
+  tempLine = document.createElement('div');
+  tempLine.className = 'temp-line';
+  document.body.appendChild(tempLine);
+  tempLine.style.left = `${x}px`;
+  tempLine.style.top = `${y}px`;
+}
+
+function updateTempLine(x, y) {
+  if (!tempLine) return;
+
+  let length = Math.sqrt(Math.pow(x + window.scrollX - startX, 2) + Math.pow(y + window.scrollY - startY, 2));
+  tempLine.style.width = `${length}px`;
+
+  let angle = Math.atan2(y + window.scrollY - startY, x + window.scrollX - startX) * (180 / Math.PI);
+  tempLine.style.transform = `rotate(${angle}deg)`;
+}
+
+function removeTempLine() {
+  if (tempLine) {
+    document.body.removeChild(tempLine);
+    tempLine = null;
+  }
+}
 
 function drawLine(x1, y1, x2, y2) {
   let line = document.createElement('div');
@@ -84,34 +115,58 @@ function drawLine(x1, y1, x2, y2) {
 
 // Set the default grid system to 12 grid and display it initially
 let gridSystem = 12;
-let gridWidth = 8;
+let gridWidth = 1680;
+let gridGap = 28;
 
-chrome.storage.local.get(['gridSystem', 'gridWidth'], (result) => {
+chrome.storage.local.get(['gridSystem', 'gridWidth', 'gridGap'], (result) => {
+  console.log(result);
   gridSystem = result.gridSystem !== undefined ? result.gridSystem : 12;
-  gridWidth = result.gridWidth !== undefined ? result.gridWidth : 8;
-  displayGrid(gridSystem, gridWidth);
+  gridWidth = result.gridWidth !== undefined ? result.gridWidth : 1680;
+  gridGap = result.gridGap !== undefined ? result.gridGap : 28;
+  displayGrid(gridSystem, gridWidth, gridGap);
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log(message);
   if (message.type === 'updateGrid') {
     gridSystem = message.gridSystem;
     gridWidth = message.gridWidth;
-    displayGrid(gridSystem, gridWidth);
+    gridGap = message.gridGap;
+    displayGrid(gridSystem, gridWidth, gridGap);
     sendResponse({ status: 'success' });
   }
 });
 
-function displayGrid(gridSystem, gridWidth) {
+function displayGrid(gridSystem, gridWidth, gridGap) {
+  const screenWidth = window.innerWidth;
+  if (gridWidth > screenWidth) {
+    gridGap = screenWidth / 1920 * gridGap;
+    gridWidth = (gridWidth / 1920) * screenWidth;
+  }
+
+  if (gridGap > gridWidth / gridSystem) {
+    gridGap = (gridWidth / gridSystem) * 0.2;
+  }
+
+  let existingGrid = document.getElementById('grid');
+  if (existingGrid) {
+    document.body.removeChild(existingGrid);
+  }
+
+  let oneGrid = gridWidth / gridSystem;
+  let oneGapPercent = gridGap / oneGrid;
+  console.log(gridWidth, gridGap, oneGrid, oneGapPercent);
   let grid = document.createElement('div');
   grid.id = 'grid';
   grid.style.position = 'fixed';
   grid.style.top = '0';
-  grid.style.left = '0';
-  grid.style.width = '100%';
+  grid.style.left = `50%`;
+  grid.style.transform = 'translateX(-50%)';
+  grid.style.width = `${gridWidth}px`;
   grid.style.height = '100%';
   grid.style.pointerEvents = 'none';
   grid.style.zIndex = '9998';
-  grid.style.backgroundSize = `${gridWidth}px ${gridWidth}px`;
-  grid.style.backgroundImage = `linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px)`;
+  grid.style.backgroundSize = `${100 / gridSystem + 100 / gridSystem * oneGapPercent / gridSystem}% 100%`;
+  grid.style.backgroundImage = `linear-gradient(to right, rgb(160 0 0 / 10%) 0, rgb(160 0 0 / 10%) ${100 - oneGapPercent * 100}%, transparent ${100 - oneGapPercent * 100}%, transparent 100%)`;
   document.body.appendChild(grid);
 }
