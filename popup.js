@@ -25,3 +25,5 @@ document.getElementById('drawing-checkbox').addEventListener('change', function(
     }
   });
 });
+
+document.getElementById('grid-width').value = 1680;
