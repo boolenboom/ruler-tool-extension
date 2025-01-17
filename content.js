@@ -115,34 +115,41 @@ function drawLine(x1, y1, x2, y2) {
 
 // Set the default grid system to 12 grid and display it initially
 let gridSystem = 12;
-let gridWidth = 8;
+let gridWidth = 1680;
+let gridGap = 28;
 
-chrome.storage.local.get(['gridSystem', 'gridWidth'], (result) => {
+chrome.storage.local.get(['gridSystem', 'gridWidth', 'gridGap'], (result) => {
   gridSystem = result.gridSystem !== undefined ? result.gridSystem : 12;
-  gridWidth = result.gridWidth !== undefined ? result.gridWidth : 8;
-  displayGrid(gridSystem, gridWidth);
+  gridWidth = result.gridWidth !== undefined ? result.gridWidth : 1680;
+  gridGap = result.gridGap !== undefined ? result.gridGap : 28;
+  displayGrid(gridSystem, gridWidth, gridGap);
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'updateGrid') {
     gridSystem = message.gridSystem;
     gridWidth = message.gridWidth;
-    displayGrid(gridSystem, gridWidth);
+    gridGap = message.gridGap;
+    displayGrid(gridSystem, gridWidth, gridGap);
     sendResponse({ status: 'success' });
   }
 });
 
-function displayGrid(gridSystem, gridWidth) {
+function displayGrid(gridSystem, gridWidth, gridGap) {
+  let viewWidth = 1920;
+  let oneGrid = gridWidth / gridSystem;
+  let oneGapPercent = gridGap / oneGrid;
   let grid = document.createElement('div');
   grid.id = 'grid';
   grid.style.position = 'fixed';
   grid.style.top = '0';
-  grid.style.left = '0';
-  grid.style.width = '100%';
+  grid.style.left = `50%`;
+  grid.style.transform = 'translateX(-50%)';
+  grid.style.width = `${gridWidth / viewWidth}%`;
   grid.style.height = '100%';
   grid.style.pointerEvents = 'none';
   grid.style.zIndex = '9998';
-  grid.style.backgroundSize = `${gridWidth}px ${gridWidth}px`;
-  grid.style.backgroundImage = `linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px)`;
+  grid.style.backgroundSize = `${100 / gridSystem + 100 / gridSystem * oneGapPercent / gridSystem}% 100%`;
+  grid.style.backgroundImage = `linear-gradient(to right, rgb(160 0 0 / 10%) 0, rgb(160 0 0 / 10%) ${100 - oneGapPercent}%, transparent ${100 - oneGapPercent}%, transparent 100%)`;
   document.body.appendChild(grid);
 }
