@@ -57,3 +57,20 @@
   transform-origin: 0 0;
   z-index: 10000;
 }
+
+/* P8d36 */
+#snap-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: red;
+  border-radius: 50%;
+  z-index: 10001;
+}
+
+/* P019d */
+.snapped-edge {
+  position: absolute;
+  background: rgba(255, 0, 0, 0.5);
+  z-index: 10001;
+}
