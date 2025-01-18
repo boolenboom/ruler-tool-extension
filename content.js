@@ -11,14 +11,25 @@ let isDrawing = false;
 let shiftPressed = false;
 let drawingEnabled = true;
 let tempLine = null;
+let snappingEnabled = false; // P316e
+let snappingRange = 10; // P2ea6
+let snapDot = null; // P2bdf
 
-chrome.storage.local.get(['drawingEnabled'], (result) => {
+chrome.storage.local.get(['drawingEnabled', 'snappingEnabled', 'snappingRange'], (result) => {
   drawingEnabled = result.drawingEnabled !== undefined ? result.drawingEnabled : true;
+  snappingEnabled = result.snappingEnabled !== undefined ? result.snappingEnabled : false;
+  snappingRange = result.snappingRange !== undefined ? result.snappingRange : 10;
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'toggleDrawing') {
     drawingEnabled = message.drawingEnabled;
+    sendResponse({ status: 'success' });
+  } else if (message.type === 'toggleSnapping') {
+    snappingEnabled = message.snappingEnabled;
+    sendResponse({ status: 'success' });
+  } else if (message.type === 'updateSnappingRange') {
+    snappingRange = message.snappingRange;
     sendResponse({ status: 'success' });
   }
 });
@@ -27,6 +38,9 @@ document.addEventListener('mousemove', (e) => {
   horizontalLine.style.top = `${e.clientY}px`;
   if (isDrawing && tempLine) {
     updateTempLine(e.clientX, e.clientY);
+  }
+  if (snappingEnabled) {
+    updateSnapDot(e.clientX, e.clientY);
   }
 });
 
@@ -43,6 +57,11 @@ document.addEventListener('mouseup', (e) => {
   if (isDrawing) {
     endX = e.clientX + window.scrollX;
     endY = e.clientY + window.scrollY;
+    if (snappingEnabled) {
+      const snapPosition = getSnapPosition(endX, endY);
+      endX = snapPosition.x;
+      endY = snapPosition.y;
+    }
     drawLine(startX, startY, endX, endY);
     isDrawing = false;
     removeTempLine();
@@ -111,6 +130,41 @@ function drawLine(x1, y1, x2, y2) {
   lengthLabel.className = 'length-label';
   lengthLabel.innerText = `${Math.round(length)}px`;
   line.appendChild(lengthLabel);
+}
+
+function getSnapPosition(x, y) {
+  const elements = document.elementsFromPoint(x, y);
+  let closestEdge = { x, y, distance: snappingRange };
+
+  elements.forEach(element => {
+    const rect = element.getBoundingClientRect();
+    const edges = [
+      { x: rect.left, y: rect.top },
+      { x: rect.right, y: rect.top },
+      { x: rect.left, y: rect.bottom },
+      { x: rect.right, y: rect.bottom }
+    ];
+
+    edges.forEach(edge => {
+      const distance = Math.sqrt(Math.pow(edge.x - x, 2) + Math.pow(edge.y - y, 2));
+      if (distance < closestEdge.distance) {
+        closestEdge = { x: edge.x, y: edge.y, distance };
+      }
+    });
+  });
+
+  return closestEdge;
+}
+
+function updateSnapDot(x, y) {
+  const snapPosition = getSnapPosition(x, y);
+  if (!snapDot) {
+    snapDot = document.createElement('div');
+    snapDot.id = 'snap-dot';
+    document.body.appendChild(snapDot);
+  }
+  snapDot.style.left = `${snapPosition.x}px`;
+  snapDot.style.top = `${snapPosition.y}px`;
 }
 
 // Set the default grid system to 12 grid and display it initially
