@@ -30,4 +30,33 @@ document.getElementById('drawing-checkbox').addEventListener('change', function(
   });
 });
 
+document.getElementById('snapping-checkbox').addEventListener('change', function(event) {
+  const snappingEnabled = event.target.checked;
+
+  chrome.runtime.sendMessage({ type: 'toggleSnapping', snappingEnabled }, function(response) {
+    if (response.status === 'success') {
+      console.log('Snapping functionality toggled');
+    } else {
+      console.error('Failed to toggle snapping functionality');
+    }
+  });
+});
+
+document.getElementById('snapping-range').addEventListener('input', function(event) {
+  const snappingRange = event.target.value;
+
+  chrome.runtime.sendMessage({ type: 'updateSnappingRange', snappingRange }, function(response) {
+    if (response.status === 'success') {
+      console.log('Snapping range updated');
+    } else {
+      console.error('Failed to update snapping range');
+    }
+  });
+});
+
+chrome.storage.local.get(['snappingEnabled', 'snappingRange'], (result) => {
+  document.getElementById('snapping-checkbox').checked = result.snappingEnabled !== undefined ? result.snappingEnabled : false;
+  document.getElementById('snapping-range').value = result.snappingRange !== undefined ? result.snappingRange : 10;
+});
+
 document.getElementById('grid-width').value = 1680;
