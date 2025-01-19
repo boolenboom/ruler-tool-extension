@@ -81,3 +81,28 @@ lineSegmentManager.deleteLineSegment(0);
 // 更新線段 / Update a line segment
 lineSegmentManager.updateLineSegment(0, 150, 150, 250, 250, true);
 ```
+
+### 使用 CommandManager 類別 / Using the CommandManager Class
+
+```javascript
+// 創建一個新的 CommandManager 實例 / Create a new CommandManager instance
+const commandManager = new CommandManager();
+
+// 處理滑鼠移動事件 / Handle mouse move event
+document.addEventListener('mousemove', (e) => commandManager.handleMouseMove(e));
+
+// 處理滑鼠按下事件 / Handle mouse down event
+document.addEventListener('mousedown', (e) => commandManager.handleMouseDown(e));
+
+// 處理滑鼠放開事件 / Handle mouse up event
+document.addEventListener('mouseup', (e) => commandManager.handleMouseUp(e));
+
+// 處理鍵盤按下事件 / Handle key down event
+document.addEventListener('keydown', (e) => commandManager.handleKeyDown(e));
+
+// 處理鍵盤放開事件 / Handle key up event
+document.addEventListener('keyup', (e) => commandManager.handleKeyUp(e));
+
+// 處理點擊事件 / Handle click event
+document.addEventListener('click', (e) => commandManager.handleClick(e));
+```

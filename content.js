@@ -216,6 +216,180 @@ class LineSegmentManager {
 
 const lineSegmentManager = new LineSegmentManager();
 
+class CommandManager {
+  constructor() {
+    this.startX = 0;
+    this.startY = 0;
+    this.endX = 0;
+    this.endY = 0;
+    this.isDrawing = false;
+    this.shiftPressed = false;
+    this.drawingEnabled = true;
+    this.tempLine = null;
+    this.snappingEnabled = false;
+    this.snappingRange = 10;
+    this.snapDot = null;
+
+    chrome.storage.local.get(['drawingEnabled', 'snappingEnabled', 'snappingRange'], (result) => {
+      this.drawingEnabled = result.drawingEnabled !== undefined ? result.drawingEnabled : true;
+      this.snappingEnabled = result.snappingEnabled !== undefined ? result.snappingEnabled : false;
+      this.snappingRange = result.snappingRange !== undefined ? result.snappingRange : 10;
+    });
+
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === 'toggleDrawing') {
+        this.drawingEnabled = message.drawingEnabled;
+        sendResponse({ status: 'success' });
+      } else if (message.type === 'toggleSnapping') {
+        this.snappingEnabled = message.snappingEnabled;
+        sendResponse({ status: 'success' });
+      } else if (message.type === 'updateSnappingRange') {
+        this.snappingRange = message.snappingRange;
+        sendResponse({ status: 'success' });
+      } else if (message.type === 'updateGrid') {
+        gridManager.updateGrid(message.gridSystem, message.gridWidth, message.gridGap);
+        sendResponse({ status: 'success' });
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+    document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+    document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+    document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+    document.addEventListener('keyup', (e) => this.handleKeyUp(e));
+    document.addEventListener('click', (e) => this.handleClick(e));
+  }
+
+  handleMouseMove(e) {
+    horizontalLine.style.top = `${e.clientY}px`;
+    if (this.isDrawing && this.tempLine) {
+      this.updateTempLine(e.clientX, e.clientY);
+    }
+    if (this.snappingEnabled) {
+      this.updateSnapDot(e.clientX, e.clientY);
+    }
+  }
+
+  handleMouseDown(e) {
+    if (!this.drawingEnabled) return;
+    this.startX = e.clientX + window.scrollX;
+    this.startY = e.clientY + window.scrollY;
+    this.isDrawing = true;
+    this.createTempLine(this.startX, this.startY);
+  }
+
+  handleMouseUp(e) {
+    if (!this.drawingEnabled) return;
+    if (this.isDrawing) {
+      this.endX = e.clientX + window.scrollX;
+      this.endY = e.clientY + window.scrollY;
+      if (this.snappingEnabled) {
+        const snapPosition = this.getSnapPosition(this.endX, this.endY);
+        this.endX = snapPosition.x;
+        this.endY = snapPosition.y;
+      }
+      const distance = Math.sqrt(Math.pow(this.endX - this.startX, 2) + Math.pow(this.endY - this.startY, 2));
+      if (distance < 1) {
+        // Click action
+        lineSegmentManager.selectLineSegmentByPosition(this.endX, this.endY);
+      } else {
+        // Drag action
+        lineSegmentManager.addLineSegment(this.startX, this.startY, this.endX, this.endY, this.shiftPressed);
+      }
+      this.isDrawing = false;
+      this.removeTempLine();
+    }
+  }
+
+  handleKeyDown(e) {
+    if (e.key === 'Shift') {
+      this.shiftPressed = true;
+    }
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      if (lineSegmentManager.selectedLineSegment) {
+        const index = lineSegmentManager.lineSegments.indexOf(lineSegmentManager.selectedLineSegment);
+        if (index !== -1) {
+          lineSegmentManager.deleteLineSegment(index);
+        }
+      }
+    }
+  }
+
+  handleKeyUp(e) {
+    if (e.key === 'Shift') {
+      this.shiftPressed = false;
+    }
+  }
+
+  handleClick(e) {
+    const x = e.clientX + window.scrollX;
+    const y = e.clientY + window.scrollY;
+    lineSegmentManager.selectLineSegmentByPosition(x, y);
+  }
+
+  createTempLine(x, y) {
+    this.tempLine = document.createElement('div');
+    this.tempLine.className = 'temp-line';
+    document.body.appendChild(this.tempLine);
+    this.tempLine.style.left = `${x}px`;
+    this.tempLine.style.top = `${y}px`;
+  }
+
+  updateTempLine(x, y) {
+    if (!this.tempLine) return;
+
+    let length = Math.sqrt(Math.pow(x + window.scrollX - this.startX, 2) + Math.pow(y + window.scrollY - this.startY, 2));
+    this.tempLine.style.width = `${length}px`;
+
+    let angle = Math.atan2(y + window.scrollY - this.startY, x + window.scrollX - this.startX) * (180 / Math.PI);
+    this.tempLine.style.transform = `rotate(${angle}deg)`;
+  }
+
+  removeTempLine() {
+    if (this.tempLine) {
+      document.body.removeChild(this.tempLine);
+      this.tempLine = null;
+    }
+  }
+
+  getSnapPosition(x, y) {
+    const elements = document.elementsFromPoint(x, y);
+    let closestEdge = { x, y, distance: this.snappingRange };
+
+    elements.forEach(element => {
+      const rect = element.getBoundingClientRect();
+      const edges = [
+        { x: rect.left, y: rect.top },
+        { x: rect.right, y: rect.top },
+        { x: rect.left, y: rect.bottom },
+        { x: rect.right, y: rect.bottom }
+      ];
+
+      edges.forEach(edge => {
+        const distance = Math.sqrt(Math.pow(edge.x - x, 2) + Math.pow(edge.y - y, 2));
+        if (distance < closestEdge.distance) {
+          closestEdge = { x: edge.x, y: edge.y, distance };
+        }
+      });
+    });
+
+    return closestEdge;
+  }
+
+  updateSnapDot(x, y) {
+    const snapPosition = this.getSnapPosition(x, y);
+    if (!this.snapDot) {
+      this.snapDot = document.createElement('div');
+      this.snapDot.id = 'snap-dot';
+      document.body.appendChild(this.snapDot);
+    }
+    this.snapDot.style.left = `${snapPosition.x}px`;
+    this.snapDot.style.top = `${snapPosition.y}px`;
+  }
+}
+
+const commandManager = new CommandManager();
+
 let ruler = document.createElement('div');
 ruler.id = 'ruler';
 document.body.appendChild(ruler);
@@ -223,157 +397,6 @@ document.body.appendChild(ruler);
 let horizontalLine = document.createElement('div');
 horizontalLine.id = 'horizontal-line';
 document.body.appendChild(horizontalLine);
-
-let startX, startY, endX, endY;
-let isDrawing = false;
-let shiftPressed = false;
-let drawingEnabled = true;
-let tempLine = null;
-let snappingEnabled = false;
-let snappingRange = 10;
-let snapDot = null;
-
-chrome.storage.local.get(['drawingEnabled', 'snappingEnabled', 'snappingRange'], (result) => {
-  drawingEnabled = result.drawingEnabled !== undefined ? result.drawingEnabled : true;
-  snappingEnabled = result.snappingEnabled !== undefined ? result.snappingEnabled : false;
-  snappingRange = result.snappingRange !== undefined ? result.snappingRange : 10;
-});
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'toggleDrawing') {
-    drawingEnabled = message.drawingEnabled;
-    sendResponse({ status: 'success' });
-  } else if (message.type === 'toggleSnapping') {
-    snappingEnabled = message.snappingEnabled;
-    sendResponse({ status: 'success' });
-  } else if (message.type === 'updateSnappingRange') {
-    snappingRange = message.snappingRange;
-    sendResponse({ status: 'success' });
-  } else if (message.type === 'updateGrid') {
-    gridManager.updateGrid(message.gridSystem, message.gridWidth, message.gridGap);
-    sendResponse({ status: 'success' });
-  }
-});
-
-document.addEventListener('mousemove', (e) => {
-  horizontalLine.style.top = `${e.clientY}px`;
-  if (isDrawing && tempLine) {
-    updateTempLine(e.clientX, e.clientY);
-  }
-  if (snappingEnabled) {
-    updateSnapDot(e.clientX, e.clientY);
-  }
-});
-
-document.addEventListener('mousedown', (e) => {
-  if (!drawingEnabled) return;
-  startX = e.clientX + window.scrollX;
-  startY = e.clientY + window.scrollY;
-  isDrawing = true;
-  createTempLine(startX, startY);
-});
-
-document.addEventListener('mouseup', (e) => {
-  if (!drawingEnabled) return;
-  if (isDrawing) {
-    endX = e.clientX + window.scrollX;
-    endY = e.clientY + window.scrollY;
-    if (snappingEnabled) {
-      const snapPosition = getSnapPosition(endX, endY);
-      endX = snapPosition.x;
-      endY = snapPosition.y;
-    }
-    lineSegmentManager.addLineSegment(startX, startY, endX, endY, shiftPressed);
-    isDrawing = false;
-    removeTempLine();
-  }
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Shift') {
-    shiftPressed = true;
-  }
-  if (e.key === 'Backspace' || e.key === 'Delete') {
-    if (lineSegmentManager.selectedLineSegment) {
-      const index = lineSegmentManager.lineSegments.indexOf(lineSegmentManager.selectedLineSegment);
-      if (index !== -1) {
-        lineSegmentManager.deleteLineSegment(index);
-      }
-    }
-  }
-});
-
-document.addEventListener('keyup', (e) => {
-  if (e.key === 'Shift') {
-    shiftPressed = false;
-  }
-});
-
-document.addEventListener('click', (e) => {
-  const x = e.clientX + window.scrollX;
-  const y = e.clientY + window.scrollY;
-  lineSegmentManager.selectLineSegmentByPosition(x, y);
-});
-
-function createTempLine(x, y) {
-  tempLine = document.createElement('div');
-  tempLine.className = 'temp-line';
-  document.body.appendChild(tempLine);
-  tempLine.style.left = `${x}px`;
-  tempLine.style.top = `${y}px`;
-}
-
-function updateTempLine(x, y) {
-  if (!tempLine) return;
-
-  let length = Math.sqrt(Math.pow(x + window.scrollX - startX, 2) + Math.pow(y + window.scrollY - startY, 2));
-  tempLine.style.width = `${length}px`;
-
-  let angle = Math.atan2(y + window.scrollY - startY, x + window.scrollX - startX) * (180 / Math.PI);
-  tempLine.style.transform = `rotate(${angle}deg)`;
-}
-
-function removeTempLine() {
-  if (tempLine) {
-    document.body.removeChild(tempLine);
-    tempLine = null;
-  }
-}
-
-function getSnapPosition(x, y) {
-  const elements = document.elementsFromPoint(x, y);
-  let closestEdge = { x, y, distance: snappingRange };
-
-  elements.forEach(element => {
-    const rect = element.getBoundingClientRect();
-    const edges = [
-      { x: rect.left, y: rect.top },
-      { x: rect.right, y: rect.top },
-      { x: rect.left, y: rect.bottom },
-      { x: rect.right, y: rect.bottom }
-    ];
-
-    edges.forEach(edge => {
-      const distance = Math.sqrt(Math.pow(edge.x - x, 2) + Math.pow(edge.y - y, 2));
-      if (distance < closestEdge.distance) {
-        closestEdge = { x: edge.x, y: edge.y, distance };
-      }
-    });
-  });
-
-  return closestEdge;
-}
-
-function updateSnapDot(x, y) {
-  const snapPosition = getSnapPosition(x, y);
-  if (!snapDot) {
-    snapDot = document.createElement('div');
-    snapDot.id = 'snap-dot';
-    document.body.appendChild(snapDot);
-  }
-  snapDot.style.left = `${snapPosition.x}px`;
-  snapDot.style.top = `${snapPosition.y}px`;
-}
 
 // Set the default grid system to 12 grid and display it initially
 gridManager.showGrid(12, 1680, 28);
