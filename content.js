@@ -1,3 +1,158 @@
+class Grid {
+  constructor(gridSystem, gridWidth, gridGap) {
+    this.gridSystem = gridSystem;
+    this.gridWidth = gridWidth;
+    this.gridGap = gridGap;
+    this.displayGrid();
+  }
+
+  displayGrid() {
+    const screenWidth = window.innerWidth;
+    if (this.gridWidth > screenWidth) {
+      this.gridGap = screenWidth / 1920 * this.gridGap;
+      this.gridWidth = (this.gridWidth / 1920) * screenWidth;
+    }
+
+    if (this.gridGap > this.gridWidth / this.gridSystem) {
+      this.gridGap = (this.gridWidth / this.gridSystem) * 0.2;
+    }
+
+    let existingGrid = document.getElementById('grid');
+    if (existingGrid) {
+      document.body.removeChild(existingGrid);
+    }
+
+    let oneGrid = this.gridWidth / this.gridSystem;
+    let oneGapPercent = this.gridGap / oneGrid;
+    let grid = document.createElement('div');
+    grid.id = 'grid';
+    grid.style.position = 'fixed';
+    grid.style.top = '0';
+    grid.style.left = `50%`;
+    grid.style.transform = 'translateX(-50%)';
+    grid.style.width = `${this.gridWidth}px`;
+    grid.style.height = '100%';
+    grid.style.pointerEvents = 'none';
+    grid.style.zIndex = '9998';
+    grid.style.backgroundSize = `${100 / this.gridSystem + 100 / this.gridSystem * oneGapPercent / this.gridSystem}% 100%`;
+    grid.style.backgroundImage = `linear-gradient(to right, rgb(160 0 0 / 10%) 0, rgb(160 0 0 / 10%) ${100 - oneGapPercent * 100}%, transparent ${100 - oneGapPercent * 100}%, transparent 100%)`;
+    document.body.appendChild(grid);
+  }
+}
+
+class LineSegment {
+  constructor(x1, y1, x2, y2, shiftPressed) {
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+    this.shiftPressed = shiftPressed;
+    this.drawLine();
+  }
+
+  drawLine() {
+    let line = document.createElement('div');
+    line.className = 'line';
+    document.body.appendChild(line);
+
+    if (this.shiftPressed) {
+      if (Math.abs(this.x2 - this.x1) > Math.abs(this.y2 - this.y1)) {
+        this.y2 = this.y1;
+      } else {
+        this.x2 = this.x1;
+      }
+    }
+
+    let length = Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
+    line.style.width = `${length}px`;
+    line.style.left = `${this.x1}px`;
+    line.style.top = `${this.y1}px`;
+
+    let angle = Math.atan2(this.y2 - this.y1, this.x2 - this.x1) * (180 / Math.PI);
+    line.style.transform = `rotate(${angle}deg)`;
+
+    let lengthLabel = document.createElement('span');
+    lengthLabel.className = 'length-label';
+    lengthLabel.innerText = `${Math.round(length)}px`;
+    line.appendChild(lengthLabel);
+  }
+}
+
+class GridManager {
+  constructor() {
+    if (!GridManager.instance) {
+      this.grid = null;
+      GridManager.instance = this;
+    }
+    return GridManager.instance;
+  }
+
+  showGrid(gridSystem, gridWidth, gridGap) {
+    this.grid = new Grid(gridSystem, gridWidth, gridGap);
+  }
+
+  hideGrid() {
+    let existingGrid = document.getElementById('grid');
+    if (existingGrid) {
+      document.body.removeChild(existingGrid);
+    }
+    this.grid = null;
+  }
+
+  updateGrid(gridSystem, gridWidth, gridGap) {
+    if (this.grid) {
+      this.grid.gridSystem = gridSystem;
+      this.grid.gridWidth = gridWidth;
+      this.grid.gridGap = gridGap;
+      this.grid.displayGrid();
+    } else {
+      this.showGrid(gridSystem, gridWidth, gridGap);
+    }
+  }
+}
+
+const gridManager = new GridManager();
+
+class LineSegmentManager {
+  constructor() {
+    this.lineSegments = [];
+  }
+
+  addLineSegment(x1, y1, x2, y2, shiftPressed) {
+    const lineSegment = new LineSegment(x1, y1, x2, y2, shiftPressed);
+    this.lineSegments.push(lineSegment);
+  }
+
+  selectLineSegment(index) {
+    if (index >= 0 && index < this.lineSegments.length) {
+      return this.lineSegments[index];
+    }
+    return null;
+  }
+
+  deleteLineSegment(index) {
+    if (index >= 0 && index < this.lineSegments.length) {
+      const lineSegment = this.lineSegments[index];
+      document.body.removeChild(lineSegment);
+      this.lineSegments.splice(index, 1);
+    }
+  }
+
+  updateLineSegment(index, x1, y1, x2, y2, shiftPressed) {
+    if (index >= 0 && index < this.lineSegments.length) {
+      const lineSegment = this.lineSegments[index];
+      lineSegment.x1 = x1;
+      lineSegment.y1 = y1;
+      lineSegment.x2 = x2;
+      lineSegment.y2 = y2;
+      lineSegment.shiftPressed = shiftPressed;
+      lineSegment.drawLine();
+    }
+  }
+}
+
+const lineSegmentManager = new LineSegmentManager();
+
 let ruler = document.createElement('div');
 ruler.id = 'ruler';
 document.body.appendChild(ruler);
@@ -11,9 +166,9 @@ let isDrawing = false;
 let shiftPressed = false;
 let drawingEnabled = true;
 let tempLine = null;
-let snappingEnabled = false; // P316e
-let snappingRange = 10; // P2ea6
-let snapDot = null; // P2bdf
+let snappingEnabled = false;
+let snappingRange = 10;
+let snapDot = null;
 
 chrome.storage.local.get(['drawingEnabled', 'snappingEnabled', 'snappingRange'], (result) => {
   drawingEnabled = result.drawingEnabled !== undefined ? result.drawingEnabled : true;
@@ -30,6 +185,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: 'success' });
   } else if (message.type === 'updateSnappingRange') {
     snappingRange = message.snappingRange;
+    sendResponse({ status: 'success' });
+  } else if (message.type === 'updateGrid') {
+    gridManager.updateGrid(message.gridSystem, message.gridWidth, message.gridGap);
     sendResponse({ status: 'success' });
   }
 });
@@ -62,7 +220,7 @@ document.addEventListener('mouseup', (e) => {
       endX = snapPosition.x;
       endY = snapPosition.y;
     }
-    drawLine(startX, startY, endX, endY);
+    lineSegmentManager.addLineSegment(startX, startY, endX, endY, shiftPressed);
     isDrawing = false;
     removeTempLine();
   }
@@ -105,33 +263,6 @@ function removeTempLine() {
   }
 }
 
-function drawLine(x1, y1, x2, y2) {
-  let line = document.createElement('div');
-  line.className = 'line';
-  document.body.appendChild(line);
-
-  if (shiftPressed) {
-    if (Math.abs(x2 - x1) > Math.abs(y2 - y1)) {
-      y2 = y1;
-    } else {
-      x2 = x1;
-    }
-  }
-
-  let length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-  line.style.width = `${length}px`;
-  line.style.left = `${x1}px`;
-  line.style.top = `${y1}px`;
-
-  let angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
-  line.style.transform = `rotate(${angle}deg)`;
-
-  let lengthLabel = document.createElement('span');
-  lengthLabel.className = 'length-label';
-  lengthLabel.innerText = `${Math.round(length)}px`;
-  line.appendChild(lengthLabel);
-}
-
 function getSnapPosition(x, y) {
   const elements = document.elementsFromPoint(x, y);
   let closestEdge = { x, y, distance: snappingRange };
@@ -168,59 +299,4 @@ function updateSnapDot(x, y) {
 }
 
 // Set the default grid system to 12 grid and display it initially
-let gridSystem = 12;
-let gridWidth = 1680;
-let gridGap = 28;
-
-chrome.storage.local.get(['gridSystem', 'gridWidth', 'gridGap'], (result) => {
-  console.log(result);
-  gridSystem = result.gridSystem !== undefined ? result.gridSystem : 12;
-  gridWidth = result.gridWidth !== undefined ? result.gridWidth : 1680;
-  gridGap = result.gridGap !== undefined ? result.gridGap : 28;
-  displayGrid(gridSystem, gridWidth, gridGap);
-});
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log(message);
-  if (message.type === 'updateGrid') {
-    gridSystem = message.gridSystem;
-    gridWidth = message.gridWidth;
-    gridGap = message.gridGap;
-    displayGrid(gridSystem, gridWidth, gridGap);
-    sendResponse({ status: 'success' });
-  }
-});
-
-function displayGrid(gridSystem, gridWidth, gridGap) {
-  const screenWidth = window.innerWidth;
-  if (gridWidth > screenWidth) {
-    gridGap = screenWidth / 1920 * gridGap;
-    gridWidth = (gridWidth / 1920) * screenWidth;
-  }
-
-  if (gridGap > gridWidth / gridSystem) {
-    gridGap = (gridWidth / gridSystem) * 0.2;
-  }
-
-  let existingGrid = document.getElementById('grid');
-  if (existingGrid) {
-    document.body.removeChild(existingGrid);
-  }
-
-  let oneGrid = gridWidth / gridSystem;
-  let oneGapPercent = gridGap / oneGrid;
-  console.log(gridWidth, gridGap, oneGrid, oneGapPercent);
-  let grid = document.createElement('div');
-  grid.id = 'grid';
-  grid.style.position = 'fixed';
-  grid.style.top = '0';
-  grid.style.left = `50%`;
-  grid.style.transform = 'translateX(-50%)';
-  grid.style.width = `${gridWidth}px`;
-  grid.style.height = '100%';
-  grid.style.pointerEvents = 'none';
-  grid.style.zIndex = '9998';
-  grid.style.backgroundSize = `${100 / gridSystem + 100 / gridSystem * oneGapPercent / gridSystem}% 100%`;
-  grid.style.backgroundImage = `linear-gradient(to right, rgb(160 0 0 / 10%) 0, rgb(160 0 0 / 10%) ${100 - oneGapPercent * 100}%, transparent ${100 - oneGapPercent * 100}%, transparent 100%)`;
-  document.body.appendChild(grid);
-}
+gridManager.showGrid(12, 1680, 28);
