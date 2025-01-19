@@ -8,6 +8,7 @@
 * 支援繪圖功能的開關 / Support toggle for drawing functionality
 * 支援吸附功能的開關 / Support toggle for snapping functionality
 * 可調整吸附範圍 / Adjustable snapping range
+* 物件導向設計的網格和線段 / Object-oriented design for grid and line segments
 
 ## 使用說明 / Instructions
 
@@ -27,3 +28,56 @@
 * `popup.html`: 彈出視窗的 HTML 檔案。/ HTML file for the popup window.
 * `popup.js`: 處理彈出視窗中的表單提交和功能開關。/ Handles form submission and functionality toggles in the popup window.
 * `styles.css`: 定義尺規、線條和吸附點的樣式。/ Defines styles for the ruler, lines, and snapping points.
+
+## 使用範例 / Examples
+
+### 使用 Grid 類別 / Using the Grid Class
+
+```javascript
+// 創建一個新的 Grid 實例 / Create a new Grid instance
+let grid = new Grid(12, 1680, 28);
+grid.displayGrid();
+```
+
+### 使用 LineSegment 類別 / Using the LineSegment Class
+
+```javascript
+// 創建一個新的 LineSegment 實例 / Create a new LineSegment instance
+let lineSegment = new LineSegment(100, 100, 200, 200, false);
+lineSegment.drawLine();
+```
+
+### 使用 GridManager 類別 / Using the GridManager Class
+
+```javascript
+// 獲取 GridManager 單例 / Get the GridManager singleton
+const gridManager = new GridManager();
+
+// 顯示格柵 / Show the grid
+gridManager.showGrid(12, 1680, 28);
+
+// 隱藏格柵 / Hide the grid
+gridManager.hideGrid();
+
+// 更新格柵 / Update the grid
+gridManager.updateGrid(12, 1680, 28);
+```
+
+### 使用 LineSegmentManager 類別 / Using the LineSegmentManager Class
+
+```javascript
+// 創建一個新的 LineSegmentManager 實例 / Create a new LineSegmentManager instance
+const lineSegmentManager = new LineSegmentManager();
+
+// 添加線段 / Add a line segment
+lineSegmentManager.addLineSegment(100, 100, 200, 200, false);
+
+// 選取線段 / Select a line segment
+const selectedLineSegment = lineSegmentManager.selectLineSegment(0);
+
+// 刪除線段 / Delete a line segment
+lineSegmentManager.deleteLineSegment(0);
+
+// 更新線段 / Update a line segment
+lineSegmentManager.updateLineSegment(0, 150, 150, 250, 250, true);
+```
