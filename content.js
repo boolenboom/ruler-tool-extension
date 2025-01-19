@@ -116,6 +116,7 @@ const gridManager = new GridManager();
 class LineSegmentManager {
   constructor() {
     this.lineSegments = [];
+    this.selectedLineSegment = null;
   }
 
   addLineSegment(x1, y1, x2, y2, shiftPressed) {
@@ -125,9 +126,71 @@ class LineSegmentManager {
 
   selectLineSegment(index) {
     if (index >= 0 && index < this.lineSegments.length) {
-      return this.lineSegments[index];
+      this.selectedLineSegment = this.lineSegments[index];
+      return this.selectedLineSegment;
     }
     return null;
+  }
+
+  selectLineSegmentByPosition(x, y) {
+    let closestLineSegment = null;
+    let minDistance = 15;
+
+    this.lineSegments.forEach(lineSegment => {
+      const distance = this.getDistanceToLineSegment(lineSegment, x, y);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestLineSegment = lineSegment;
+      }
+    });
+
+    if (closestLineSegment) {
+      this.selectedLineSegment = closestLineSegment;
+      this.highlightLineSegment(closestLineSegment);
+    }
+
+    return closestLineSegment;
+  }
+
+  getDistanceToLineSegment(lineSegment, x, y) {
+    const { x1, y1, x2, y2 } = lineSegment;
+    const A = x - x1;
+    const B = y - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+
+    const dot = A * C + B * D;
+    const len_sq = C * C + D * D;
+    const param = len_sq !== 0 ? dot / len_sq : -1;
+
+    let xx, yy;
+
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    } else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    } else {
+      xx = x1 + param * C;
+      yy = y1 + param * D;
+    }
+
+    const dx = x - xx;
+    const dy = y - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  highlightLineSegment(lineSegment) {
+    const lineElements = document.getElementsByClassName('line');
+    for (let i = 0; i < lineElements.length; i++) {
+      lineElements[i].classList.remove('highlighted');
+    }
+
+    const index = this.lineSegments.indexOf(lineSegment);
+    if (index !== -1) {
+      lineElements[index].classList.add('highlighted');
+    }
   }
 
   deleteLineSegment(index) {
@@ -230,12 +293,26 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Shift') {
     shiftPressed = true;
   }
+  if (e.key === 'Backspace' || e.key === 'Delete') {
+    if (lineSegmentManager.selectedLineSegment) {
+      const index = lineSegmentManager.lineSegments.indexOf(lineSegmentManager.selectedLineSegment);
+      if (index !== -1) {
+        lineSegmentManager.deleteLineSegment(index);
+      }
+    }
+  }
 });
 
 document.addEventListener('keyup', (e) => {
   if (e.key === 'Shift') {
     shiftPressed = false;
   }
+});
+
+document.addEventListener('click', (e) => {
+  const x = e.clientX + window.scrollX;
+  const y = e.clientY + window.scrollY;
+  lineSegmentManager.selectLineSegmentByPosition(x, y);
 });
 
 function createTempLine(x, y) {
