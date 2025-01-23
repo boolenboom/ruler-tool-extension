@@ -85,3 +85,26 @@
   z-index: 10002;
   cursor: pointer;
 }
+
+/* P67f1 */
+.comment {
+  position: absolute;
+  background: yellow;
+  padding: 5px;
+  border: 1px solid black;
+  z-index: 10003;
+}
+
+.comment-text {
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* Pdba7 */
+.comment-edit,
+.comment-delete {
+  margin-right: 5px;
+  padding: 2px 5px;
+  font-size: 12px;
+  cursor: pointer;
+}

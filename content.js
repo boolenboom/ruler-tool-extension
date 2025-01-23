@@ -216,6 +216,79 @@ class LineSegmentManager {
 
 const lineSegmentManager = new LineSegmentManager();
 
+class Comment {
+  constructor(x, y, text = '') {
+    this.x = x;
+    this.y = y;
+    this.text = text;
+    this.createCommentElement();
+  }
+
+  createCommentElement() {
+    this.commentElement = document.createElement('div');
+    this.commentElement.className = 'comment';
+    this.commentElement.style.left = `${this.x}px`;
+    this.commentElement.style.top = `${this.y}px`;
+
+    this.textElement = document.createElement('span');
+    this.textElement.className = 'comment-text';
+    this.textElement.innerText = this.text;
+    this.commentElement.appendChild(this.textElement);
+
+    this.editButton = document.createElement('button');
+    this.editButton.className = 'comment-edit';
+    this.editButton.innerText = 'Edit';
+    this.editButton.addEventListener('click', () => this.editComment());
+    this.commentElement.appendChild(this.editButton);
+
+    this.deleteButton = document.createElement('button');
+    this.deleteButton.className = 'comment-delete';
+    this.deleteButton.innerText = 'Delete';
+    this.deleteButton.addEventListener('click', () => this.deleteComment());
+    this.commentElement.appendChild(this.deleteButton);
+
+    document.body.appendChild(this.commentElement);
+  }
+
+  editComment() {
+    const newText = prompt('Edit your comment:', this.text);
+    if (newText !== null) {
+      this.text = newText;
+      this.textElement.innerText = this.text;
+    }
+  }
+
+  deleteComment() {
+    document.body.removeChild(this.commentElement);
+  }
+}
+
+class CommentManager {
+  constructor() {
+    this.comments = [];
+  }
+
+  addComment(x, y, text) {
+    const comment = new Comment(x, y, text);
+    this.comments.push(comment);
+  }
+
+  editComment(index, newText) {
+    if (index >= 0 && index < this.comments.length) {
+      this.comments[index].editComment(newText);
+    }
+  }
+
+  deleteComment(index) {
+    if (index >= 0 && index < this.comments.length) {
+      this.comments[index].deleteComment();
+      this.comments.splice(index, 1);
+    }
+  }
+}
+
+const commentManager = new CommentManager();
+
 let ruler = document.createElement('div');
 ruler.id = 'ruler';
 document.body.appendChild(ruler);
@@ -313,6 +386,9 @@ document.addEventListener('click', (e) => {
   const x = e.clientX + window.scrollX;
   const y = e.clientY + window.scrollY;
   lineSegmentManager.selectLineSegmentByPosition(x, y);
+  if (commentModeEnabled) {
+    commentManager.addComment(x, y);
+  }
 });
 
 function createTempLine(x, y) {
