@@ -9,6 +9,7 @@
 * 支援吸附功能的開關 / Support toggle for snapping functionality
 * 可調整吸附範圍 / Adjustable snapping range
 * 物件導向設計的網格和線段 / Object-oriented design for grid and line segments
+* 支援註解功能 / Support for comment functionality
 
 ## 使用說明 / Instructions
 
@@ -19,6 +20,7 @@
 5. 按下滑鼠左鍵開始繪製線條，鬆開左鍵結束繪製，線條會顯示長度。/ Press the left mouse button to start drawing a line, release the left button to end drawing, and the line will display its length.
 6. 按住 Shift 鍵可以繪製水平或垂直的線條。/ Hold the Shift key to draw horizontal or vertical lines.
 7. 吸附功能開啟時，線條會自動吸附到最近的邊緣。/ When the snapping functionality is enabled, the lines will automatically snap to the nearest edge.
+8. 開啟註解模式後，點擊網頁上的任意位置可以新增註解。/ When the comment mode is enabled, click anywhere on the web page to add a comment.
 
 ## 文件結構 / File Structure
 
@@ -80,4 +82,28 @@ lineSegmentManager.deleteLineSegment(0);
 
 // 更新線段 / Update a line segment
 lineSegmentManager.updateLineSegment(0, 150, 150, 250, 250, true);
+```
+
+### 使用 Comment 類別 / Using the Comment Class
+
+```javascript
+// 創建一個新的 Comment 實例 / Create a new Comment instance
+let comment = new Comment(100, 100, 'This is a comment');
+comment.createCommentElement();
+```
+
+### 使用 CommentManager 類別 / Using the CommentManager Class
+
+```javascript
+// 創建一個新的 CommentManager 實例 / Create a new CommentManager instance
+const commentManager = new CommentManager();
+
+// 添加註解 / Add a comment
+commentManager.addComment(100, 100, 'This is a comment');
+
+// 編輯註解 / Edit a comment
+commentManager.editComment(0, 'This is an edited comment');
+
+// 刪除註解 / Delete a comment
+commentManager.deleteComment(0);
 ```
