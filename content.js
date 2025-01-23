@@ -47,6 +47,7 @@ class LineSegment {
     this.x2 = x2;
     this.y2 = y2;
     this.shiftPressed = shiftPressed;
+    this.dom = null;
     this.drawLine();
   }
 
@@ -75,6 +76,8 @@ class LineSegment {
     lengthLabel.className = 'length-label';
     lengthLabel.innerText = `${Math.round(length)}px`;
     line.appendChild(lengthLabel);
+
+    this.dom = line;
   }
 }
 
@@ -196,7 +199,9 @@ class LineSegmentManager {
   deleteLineSegment(index) {
     if (index >= 0 && index < this.lineSegments.length) {
       const lineSegment = this.lineSegments[index];
-      document.body.removeChild(lineSegment);
+      if (lineSegment.dom) {
+        document.body.removeChild(lineSegment.dom);
+      }
       this.lineSegments.splice(index, 1);
     }
   }
