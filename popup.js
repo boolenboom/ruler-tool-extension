@@ -60,3 +60,25 @@ chrome.storage.local.get(['snappingEnabled', 'snappingRange'], (result) => {
 });
 
 document.getElementById('grid-width').value = 1680;
+
+document.getElementById('save-comment').addEventListener('click', function() {
+  const commentText = document.getElementById('comment-text').value;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.sendMessage(tabs[0].id, {
+      type: 'saveComment',
+      commentText
+    }, (response) => {
+      console.log(response.status);
+    });
+  });
+});
+
+document.getElementById('delete-comment').addEventListener('click', function() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.sendMessage(tabs[0].id, {
+      type: 'deleteComment'
+    }, (response) => {
+      console.log(response.status);
+    });
+  });
+});
